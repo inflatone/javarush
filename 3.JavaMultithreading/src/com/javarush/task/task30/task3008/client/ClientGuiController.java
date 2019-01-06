@@ -1,7 +1,5 @@
 package com.javarush.task.task30.task3008.client;
 
-import java.util.concurrent.locks.ReentrantLock;
-
 public class ClientGuiController extends Client {
     private ClientGuiModel model = new ClientGuiModel();
     private ClientGuiView view = new ClientGuiView(this);
@@ -11,7 +9,6 @@ public class ClientGuiController extends Client {
     }
 
     public static void main(String[] args) {
-        ReentrantLock
         new ClientGuiController().run();
     }
 
