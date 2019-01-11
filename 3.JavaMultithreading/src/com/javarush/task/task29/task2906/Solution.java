@@ -15,10 +15,6 @@ public class Solution {
     }
 
     public static Integer getValue(boolean first, boolean second) {
-        Integer result = second ? 200 : null;
-        if (first) {
-            result = 100;
-        }
-        return result;
+        return first ? Integer.valueOf(100) : second ? 200 : null;
     }
 }
