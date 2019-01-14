@@ -27,4 +27,12 @@ public class Order {
                         tablet.toString()
                 );
     }
+
+    public int getTotalCookingTime() {
+        return dishes.stream().mapToInt(Dish::getDuration).sum();
+    }
+
+    public boolean isEmpty() {
+        return dishes.isEmpty();
+    }
 }
