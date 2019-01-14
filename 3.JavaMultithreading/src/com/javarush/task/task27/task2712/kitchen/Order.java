@@ -22,7 +22,7 @@ public class Order {
                 ? ""
                 : String
                 .format(
-                        "Your order: [%s] of Tablet{number=%s}",
+                        "Your order: [%s] of %s",
                         dishes.stream().map(Enum::name).collect(Collectors.joining(", ")),
                         tablet.toString()
                 );
