@@ -1,5 +1,7 @@
 package com.javarush.task.task27.task2712;
 
+import com.javarush.task.task27.task2712.ad.AdvertisementManager;
+import com.javarush.task.task27.task2712.ad.NoVideoAvailableException;
 import com.javarush.task.task27.task2712.kitchen.Order;
 
 import java.io.IOException;
@@ -10,6 +12,7 @@ import java.util.logging.Logger;
 public class Tablet extends Observable {
     private static Logger logger = Logger.getLogger(Tablet.class.getName());
     final int number;
+
     public Tablet(int number) {
         this.number = number;
     }
@@ -22,9 +25,14 @@ public class Tablet extends Observable {
             if (!result.isEmpty()) {
                 setChanged();
                 notifyObservers(result);
+                new AdvertisementManager(result.getTotalCookingTime() * 60)
+                        .processVideos();
             }
+            int x = 1;
         } catch (IOException e) {
             logger.log(Level.SEVERE, "Console is unavailable.");
+        } catch (NoVideoAvailableException nvae) {
+            logger.log(Level.INFO, "No video is available for the order " + result);
         }
         return result;
     }
