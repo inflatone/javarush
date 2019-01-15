@@ -11,11 +11,15 @@ public class Restaurant {
         Waiter waiter = new Waiter();
         tablet.addObserver(cook);
         cook.addObserver(waiter);
-
-
+        DirectorTablet director = new DirectorTablet();
+        director.printAdvertisementProfit();
+        director.printCookWorkloading();
+        director.printActiveVideoSet();
+        director.printArchivedVideoSet();
         Order order = tablet.createOrder();
         /*tablet.createOrder();
         tablet.createOrder();
         tablet.createOrder();
+
     */}
 }
