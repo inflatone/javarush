@@ -22,18 +22,22 @@ public class StatisticManager {
     }
 
     public void register(EventDataRow data) {
-        
+        statisticStorage.put(data);
     }
 
     private class StatisticStorage {
         private final Map<EventType, List<EventDataRow>> storage;
 
-        public StatisticStorage() {
+        StatisticStorage() {
             storage = Arrays.stream(EventType.values())
                     .collect(Collectors.toMap(
                             Function.identity(),
                             i -> new ArrayList<>()
                     ));
+        }
+
+        private void put(EventDataRow data) {
+            storage.get(data.getType()).add(data);
         }
     }
 }

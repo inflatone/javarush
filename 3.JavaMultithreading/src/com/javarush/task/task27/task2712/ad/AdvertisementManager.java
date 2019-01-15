@@ -1,6 +1,8 @@
 package com.javarush.task.task27.task2712.ad;
 
 import com.javarush.task.task27.task2712.ConsoleHelper;
+import com.javarush.task.task27.task2712.statistic.StatisticManager;
+import com.javarush.task.task27.task2712.statistic.event.VideoSelectedEventDataRow;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -20,36 +22,39 @@ public class AdvertisementManager {
         if (storage.list().isEmpty()) {
             throw new NoVideoAvailableException();
         }
-        new BestSelectionFinder()
-                .getBestSelection()
-                .stream()
-                .sorted(
-                        Comparator.comparing(
-                                Advertisement::getAmountPerOneDisplaying, Comparator.reverseOrder()
-                        ).thenComparing(Advertisement::getDuration, Comparator.reverseOrder())
-                )
-                .forEach(ad -> {
-                    ad.revalidate();
-                    ConsoleHelper.writeMessage(String.format(
-                            "%s is displaying... %s, %s",
-                            ad.getName(),
-                            ad.getAmountPerOneDisplaying(),
-                            1000 * ad.getAmountPerOneDisplaying() / ad.getDuration()
-                    ));
-                });
+        OptimalVideoSelector selector = new OptimalVideoSelector();
+        StatisticManager.getInstance()
+                .register(new VideoSelectedEventDataRow(
+                        selector.optimalVideoSet,
+                        selector.amount,
+                        selector.totalDuration
+                ));
+        selector.optimalVideoSet.forEach(ad -> {
+            ad.revalidate();
+            ConsoleHelper.writeMessage(String.format(
+                    "%s is displaying... %s, %s",
+                    ad.getName(),
+                    ad.getAmountPerOneDisplaying(),
+                    1000 * ad.getAmountPerOneDisplaying() / ad.getDuration()
+            ));
+        });
     }
 
-    private class BestSelectionFinder {
-        private long bestPrice;
-        private int bestTime;
-        private List<Advertisement> bestList;
+    private class OptimalVideoSelector {
+        private long amount;
+        private int totalDuration;
+        private List<Advertisement> optimalVideoSet = Collections.emptyList();
+
         private List<Advertisement> actualAds = storage.list()
                 .stream().filter(ad -> ad.getHits() > 0).collect(Collectors.toList());
 
-        List<Advertisement> getBestSelection() {
-            bestList = Collections.emptyList();
+        private OptimalVideoSelector() {
             actualAds.forEach(ad -> recursiveCheck(Collections.singletonList(ad)));
-            return bestList;
+            optimalVideoSet.sort(
+                    Comparator.comparing(
+                            Advertisement::getAmountPerOneDisplaying, Comparator.reverseOrder()
+                    ).thenComparing(Advertisement::getDuration, Comparator.reverseOrder())
+            );
         }
 
         private void recursiveCheck(List<Advertisement> ads) {
@@ -67,9 +72,9 @@ public class AdvertisementManager {
             if (needToContinue) {
                 long price = ads.stream().mapToLong(Advertisement::getAmountPerOneDisplaying).sum();
                 if (isBetterThenCurrentBest(price, seconds, ads.size())) {
-                    bestPrice = price;
-                    bestTime = seconds;
-                    bestList = ads;
+                    amount = price;
+                    totalDuration = seconds;
+                    optimalVideoSet = ads;
                 }
             }
             return needToContinue;
@@ -81,14 +86,13 @@ public class AdvertisementManager {
             return result;
         }
 
-
         private boolean isBetterThenCurrentBest(long price, int seconds, int size) {
-            return price > bestPrice
+            return price > amount
                     ||
-                    price == bestPrice
+                    price == amount
                             && (
-                            seconds > bestTime
-                                    || seconds == bestTime && size < bestList.size()
+                            seconds > totalDuration
+                                    || seconds == totalDuration && size < optimalVideoSet.size()
                     );
         }
     }
