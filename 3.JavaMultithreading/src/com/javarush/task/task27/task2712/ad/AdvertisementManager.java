@@ -20,7 +20,7 @@ public class AdvertisementManager {
         if (storage.list().isEmpty()) {
             throw new NoVideoAvailableException();
         }
-        new BestListFinder()
+        new BestSelectionFinder()
                 .getBestSelection()
                 .stream()
                 .sorted(
@@ -39,7 +39,7 @@ public class AdvertisementManager {
                 });
     }
 
-    private class BestListFinder {
+    private class BestSelectionFinder {
         private long bestPrice;
         private int bestTime;
         private List<Advertisement> bestList;
