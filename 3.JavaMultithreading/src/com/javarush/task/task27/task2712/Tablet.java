@@ -28,7 +28,6 @@ public class Tablet extends Observable {
                 new AdvertisementManager(result.getTotalCookingTime() * 60)
                         .processVideos();
             }
-            int x = 1;
         } catch (IOException e) {
             logger.log(Level.SEVERE, "Console is unavailable.");
         } catch (NoVideoAvailableException nvae) {

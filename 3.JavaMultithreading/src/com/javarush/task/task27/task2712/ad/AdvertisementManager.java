@@ -2,9 +2,10 @@ package com.javarush.task.task27.task2712.ad;
 
 import com.javarush.task.task27.task2712.ConsoleHelper;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Set;
+import java.util.List;
 import java.util.stream.Collectors;
 
 public class AdvertisementManager {
@@ -19,8 +20,8 @@ public class AdvertisementManager {
         if (storage.list().isEmpty()) {
             throw new NoVideoAvailableException();
         }
-        new BestSetFinder()
-                .getBestSet()
+        new BestListFinder()
+                .getBestSelection()
                 .stream()
                 .sorted(
                         Comparator.comparing(
@@ -38,43 +39,48 @@ public class AdvertisementManager {
                 });
     }
 
-    private class BestSetFinder {
+    private class BestListFinder {
         private long bestPrice;
         private int bestTime;
-        private Set<Advertisement> bestSet;
+        private List<Advertisement> bestList;
+        private List<Advertisement> actualAds = storage.list()
+                .stream().filter(ad -> ad.getHits() > 0).collect(Collectors.toList());
 
-        Set<Advertisement> getBestSet() {
-            bestSet = Collections.emptySet();
-            recursiveCheck(
-                    storage.list().stream()
-                            .filter(ad -> ad.getHits() > 0)
-                            .collect(Collectors.toSet())
-            );
-            return bestSet;
+        List<Advertisement> getBestSelection() {
+            bestList = Collections.emptyList();
+            actualAds.forEach(ad -> recursiveCheck(Collections.singletonList(ad)));
+            return bestList;
         }
 
-        private Set<Advertisement> getDuplicateSetWithoutElement(Set<Advertisement> ads, Advertisement element) {
-            return ads.stream().filter(ad -> !ad.equals(element)).collect(Collectors.toSet());
-        }
-
-        private void recursiveCheck(Set<Advertisement> ads) {
-            if (!ads.isEmpty()) {
-                checkSet(ads);
-                ads.forEach(ad -> recursiveCheck(getDuplicateSetWithoutElement(ads, ad)));
+        private void recursiveCheck(List<Advertisement> ads) {
+            if (checkList(ads)) {
+                actualAds.stream()
+                        .filter(ad -> !ads.contains(ad))
+                        .map(ad -> getDuplicateListWithAddedElement(ads, ad))
+                        .forEach(this::recursiveCheck);
             }
         }
 
-        private void checkSet(Set<Advertisement> ads) {
+        private boolean checkList(List<Advertisement> ads) {
             int seconds = ads.stream().mapToInt(Advertisement::getDuration).sum();
-            if (seconds <= timeSeconds) {
+            boolean needToContinue = seconds <= timeSeconds;
+            if (needToContinue) {
                 long price = ads.stream().mapToLong(Advertisement::getAmountPerOneDisplaying).sum();
                 if (isBetterThenCurrentBest(price, seconds, ads.size())) {
                     bestPrice = price;
                     bestTime = seconds;
-                    bestSet = ads;
+                    bestList = ads;
                 }
             }
+            return needToContinue;
         }
+
+        private List<Advertisement> getDuplicateListWithAddedElement(List<Advertisement> List, Advertisement element) {
+            List<Advertisement> result = new ArrayList<>(List);
+            result.add(element);
+            return result;
+        }
+
 
         private boolean isBetterThenCurrentBest(long price, int seconds, int size) {
             return price > bestPrice
@@ -82,7 +88,7 @@ public class AdvertisementManager {
                     price == bestPrice
                             && (
                             seconds > bestTime
-                                    || seconds == bestTime && size < bestSet.size()
+                                    || seconds == bestTime && size < bestList.size()
                     );
         }
     }
