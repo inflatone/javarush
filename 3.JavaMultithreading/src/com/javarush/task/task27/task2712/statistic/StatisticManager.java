@@ -53,6 +53,10 @@ public class StatisticManager {
         );
     }
 
+    public Set<Cook> getCooks() {
+        return cooks;
+    }
+
 
 
     private class StatisticStorage {

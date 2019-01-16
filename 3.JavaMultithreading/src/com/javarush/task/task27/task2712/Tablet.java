@@ -26,10 +26,10 @@ public class Tablet extends Observable {
         initOrder(true);
     }
 
-    private Order initOrder(boolean shoudBeMoke) {
+    private Order initOrder(boolean shouldBeMock) {
         Order result = null;
         try {
-            result = shoudBeMoke ? new TestOrder(this) : new Order(this);
+            result = shouldBeMock ? new TestOrder(this) : new Order(this);
             if (!result.isEmpty()) {
                 setChanged();
                 notifyObservers(result);

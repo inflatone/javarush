@@ -5,10 +5,10 @@ import com.javarush.task.task27.task2712.statistic.StatisticManager;
 import com.javarush.task.task27.task2712.statistic.event.CookedOrderEventDataRow;
 
 import java.util.Observable;
-import java.util.Observer;
 
-public class Cook extends Observable implements Observer {
+public class Cook extends Observable {
     private final String name;
+    private boolean busy;
 
     public Cook(String name) {
         this.name = name;
@@ -19,9 +19,8 @@ public class Cook extends Observable implements Observer {
         return this.name;
     }
 
-    @Override
-    public void update(Observable o, Object arg) {
-        Order order = (Order) arg;
+    public void startCookingOrder(Order order) {
+        busy = true;
         StatisticManager.getInstance().register(new CookedOrderEventDataRow(
                 order.getTablet().toString(),
                 name,
@@ -34,8 +33,16 @@ public class Cook extends Observable implements Observer {
                         order,
                         order.getTotalCookingTime())
         );
+        try {
+            Thread.sleep(order.getTotalCookingTime() * 10);
+        } catch (InterruptedException ignored) {
+        }
         setChanged();
-        notifyObservers(arg);
+        notifyObservers(order);
+        busy = false;
+    }
 
+    public boolean isBusy() {
+        return busy;
     }
 }
