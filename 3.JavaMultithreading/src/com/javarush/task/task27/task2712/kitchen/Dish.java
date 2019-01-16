@@ -30,4 +30,6 @@ public enum Dish {
     public static void main(String[] args) {
         System.out.println(allDishesToString());
     }
+
+
 }
