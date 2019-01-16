@@ -1,5 +1,6 @@
 package com.javarush.task.task27.task2712;
 
+import com.javarush.task.task27.task2712.ad.StatisticAdvertisementManager;
 import com.javarush.task.task27.task2712.statistic.StatisticManager;
 
 import java.time.format.DateTimeFormatter;
@@ -10,6 +11,15 @@ public class DirectorTablet {
     private final static DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd-MMM-yyyy");
 
     public void printAdvertisementProfit() {
+
+        class TotalAmountCounter {
+            private double value = 0d;
+
+            private void add(double value) {
+                this.value += value;
+            }
+        }
+
         final TotalAmountCounter counter = new TotalAmountCounter();
         StatisticManager.getInstance().getAdvertisementStats().entrySet().stream()
                 .sorted(Comparator.comparing(Map.Entry::getKey, Comparator.reverseOrder()))
@@ -43,19 +53,15 @@ public class DirectorTablet {
     }
 
     public void printActiveVideoSet() {
-
+        StatisticAdvertisementManager.getInstance()
+                .getFilteredSortedListOfAdvertisement(ad -> ad.getHits() > 0)
+                .forEach(ad -> ConsoleHelper.writeMessage(String.format("%s - %s", ad.getName(), ad.getHits())));
     }
 
     public void printArchivedVideoSet() {
-
-    }
-
-    private class TotalAmountCounter {
-        private double value = 0d;
-
-        private void add(double value) {
-            this.value += value;
-        }
+        StatisticAdvertisementManager.getInstance()
+                .getFilteredSortedListOfAdvertisement(ad -> ad.getHits() == 0)
+                .forEach(ad -> ConsoleHelper.writeMessage(ad.getName()));
     }
 
 }

@@ -12,7 +12,7 @@ public class AdvertisementStorage {
         add(new Advertisement(someContent, "1st Video", 5000, 100, 3 * 60)); // 3 min
         add(new Advertisement(someContent, "2nd Video", 100, 10, 15 * 60)); // 15 min
         add(new Advertisement(someContent, "3rd Video", 400, 2, 10 * 60));   // 10 min
-        add(new Advertisement(someContent, "4th Video", 400, 2, 5 * 60));   // 10 min
+        add(new Advertisement(someContent, "четвертое видео", 2000, 4, 2 * 60));   // 2 min
     }
 
     public static AdvertisementStorage getInstance() {
