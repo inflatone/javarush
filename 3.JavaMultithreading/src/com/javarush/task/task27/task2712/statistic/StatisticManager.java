@@ -1,6 +1,5 @@
 package com.javarush.task.task27.task2712.statistic;
 
-import com.javarush.task.task27.task2712.kitchen.Cook;
 import com.javarush.task.task27.task2712.statistic.event.CookedOrderEventDataRow;
 import com.javarush.task.task27.task2712.statistic.event.EventDataRow;
 import com.javarush.task.task27.task2712.statistic.event.EventType;
@@ -8,14 +7,16 @@ import com.javarush.task.task27.task2712.statistic.event.VideoSelectedEventDataR
 
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class StatisticManager {
     private final static StatisticManager instance = new StatisticManager();
     private final StatisticStorage statisticStorage = new StatisticStorage();
-    private final Set<Cook> cooks = new HashSet<>();
 
     private StatisticManager() {
     }
@@ -28,9 +29,7 @@ public class StatisticManager {
         statisticStorage.put(data);
     }
 
-    public void register(Cook cook) {
-        cooks.add(cook);
-    }
+
 
     public Map<LocalDate, Double> getAdvertisementStats() {
         return statisticStorage.getSelectedVideosEvents().stream().collect(
@@ -52,12 +51,6 @@ public class StatisticManager {
                 )
         );
     }
-
-    public Set<Cook> getCooks() {
-        return cooks;
-    }
-
-
 
     private class StatisticStorage {
         private final Map<EventType, List<EventDataRow>> storage;
