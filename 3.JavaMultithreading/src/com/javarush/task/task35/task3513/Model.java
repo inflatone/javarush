@@ -13,6 +13,10 @@ public class Model {
         resetGameTiles();
     }
 
+    public Tile[][] getGameTiles() {
+        return gameTiles;
+    }
+
     void resetGameTiles() {
         gameTiles = new Tile[FIELD_WIDTH][FIELD_WIDTH];
         for (int i = 0; i < FIELD_WIDTH; i++) {
@@ -92,6 +96,22 @@ public class Model {
         a.value ^= b.value;
         b.value ^= a.value;
         a.value ^= b.value;
+    }
+
+    public boolean canMove() {
+        boolean result = !getEmptyTiles().isEmpty();
+        for (int i = 0; i < FIELD_WIDTH && !result; i++) {
+            for (int j = 0; j < FIELD_WIDTH - 1; j++) {
+                if (
+                        gameTiles[i][j].value == gameTiles[i][j + 1].value
+                                || gameTiles[j][i].value == gameTiles[j + 1][i].value
+                ) {
+                    result = true;
+                    break;
+                }
+            }
+        }
+        return result;
     }
 
     public void left() {
