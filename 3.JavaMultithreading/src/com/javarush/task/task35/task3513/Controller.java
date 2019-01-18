@@ -47,7 +47,9 @@ public class Controller extends KeyAdapter {
     private void processStep(int keyCode) {
         if (keyCode == KeyEvent.VK_LEFT) {
             model.left();
-        } else if (keyCode == KeyEvent.VK_RIGHT) {
+        } else if (keyCode == KeyEvent.VK_Z) {
+            model.rollback();
+        }else if (keyCode == KeyEvent.VK_RIGHT) {
             model.right();
         } else if (keyCode == KeyEvent.VK_UP) {
             model.up();

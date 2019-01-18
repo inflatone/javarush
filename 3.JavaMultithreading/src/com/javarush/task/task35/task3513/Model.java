@@ -2,6 +2,7 @@ package com.javarush.task.task35.task3513;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Stack;
 import java.util.stream.Collectors;
 
 public class Model {
@@ -9,12 +10,65 @@ public class Model {
     int score, maxTile;
     private Tile[][] gameTiles;
 
+    private Stack<Tile[][]> previousStates = new Stack<>();
+    private Stack<Integer> previousScores = new Stack<>();
+    private boolean isSaveNeeded = true;
+
     public Model() {
         resetGameTiles();
     }
 
     public Tile[][] getGameTiles() {
         return gameTiles;
+    }
+
+    public void left() {
+        saveState(gameTiles);
+        move();
+    }
+
+    public void right() {
+        saveState(gameTiles);
+        rotate();
+        rotate();
+        move();
+        rotate();
+        rotate();
+
+    }
+
+    public void up() {
+        saveState(gameTiles);
+        rotate();
+        move();
+        rotate();
+        rotate();
+        rotate();
+    }
+
+    public void down() {
+        saveState(gameTiles);
+        rotate();
+        rotate();
+        rotate();
+        move();
+        rotate();
+    }
+
+    public boolean canMove() {
+        boolean result = !getEmptyTiles().isEmpty();
+        for (int i = 0; i < FIELD_WIDTH && !result; i++) {
+            for (int j = 0; j < FIELD_WIDTH - 1; j++) {
+                if (
+                        gameTiles[i][j].value == gameTiles[i][j + 1].value
+                                || gameTiles[j][i].value == gameTiles[j + 1][i].value
+                ) {
+                    result = true;
+                    break;
+                }
+            }
+        }
+        return result;
     }
 
     void resetGameTiles() {
@@ -98,51 +152,6 @@ public class Model {
         a.value ^= b.value;
     }
 
-    public boolean canMove() {
-        boolean result = !getEmptyTiles().isEmpty();
-        for (int i = 0; i < FIELD_WIDTH && !result; i++) {
-            for (int j = 0; j < FIELD_WIDTH - 1; j++) {
-                if (
-                        gameTiles[i][j].value == gameTiles[i][j + 1].value
-                                || gameTiles[j][i].value == gameTiles[j + 1][i].value
-                ) {
-                    result = true;
-                    break;
-                }
-            }
-        }
-        return result;
-    }
-
-    public void left() {
-        move();
-    }
-
-    public void right() {
-        rotate();
-        rotate();
-        move();
-        rotate();
-        rotate();
-
-    }
-
-    public void up() {
-        rotate();
-        move();
-        rotate();
-        rotate();
-        rotate();
-    }
-
-    public void down() {
-        rotate();
-        rotate();
-        rotate();
-        move();
-        rotate();
-    }
-
     private void move() {
         boolean isChanged = false;
         for (Tile[] line : gameTiles) {
@@ -162,5 +171,30 @@ public class Model {
             }
         }
         gameTiles = copy;
+    }
+
+    private Tile[][] getDeepCopy(Tile[][] tiles) {
+        Tile[][] result = new Tile[FIELD_WIDTH][FIELD_WIDTH];
+        for (int i = 0; i < FIELD_WIDTH; i++) {
+            for (int j = 0; j < FIELD_WIDTH; j++) {
+                result[i][j] = new Tile(tiles[i][j].value);
+            }
+        }
+        return result;
+    }
+
+    private void saveState(Tile[][] tiles) {
+        previousStates.push(getDeepCopy(tiles));
+        previousScores.push(score);
+        isSaveNeeded = false;
+    }
+
+    public void rollback() {
+        if (!previousScores.empty() && !previousStates.empty()) {
+            gameTiles = previousStates.pop();
+            score = previousScores.pop();
+        }
+
+
     }
 }
