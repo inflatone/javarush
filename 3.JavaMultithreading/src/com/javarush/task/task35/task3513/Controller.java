@@ -31,7 +31,7 @@ public class Controller extends KeyAdapter {
 
     @Override
     public void keyPressed(KeyEvent e) {
-        if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+        if (e.getKeyCode() == KeyEvent.VK_ESCAPE || view.isGameLost) {
             resetGame();
         } else if (!model.canMove()) {
             view.isGameLost = true;
@@ -45,11 +45,15 @@ public class Controller extends KeyAdapter {
     }
 
     private void processStep(int keyCode) {
-        if (keyCode == KeyEvent.VK_LEFT) {
-            model.left();
-        } else if (keyCode == KeyEvent.VK_Z) {
+        if (keyCode == KeyEvent.VK_Z) {
             model.rollback();
-        }else if (keyCode == KeyEvent.VK_RIGHT) {
+        } else if (keyCode == KeyEvent.VK_R) {
+            model.randomMove();
+        } else if (keyCode == KeyEvent.VK_A) {
+            model.autoMove();
+        } else if (keyCode == KeyEvent.VK_LEFT) {
+            model.left();
+        } else if (keyCode == KeyEvent.VK_RIGHT) {
             model.right();
         } else if (keyCode == KeyEvent.VK_UP) {
             model.up();

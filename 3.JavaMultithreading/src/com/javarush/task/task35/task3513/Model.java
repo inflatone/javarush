@@ -1,8 +1,6 @@
 package com.javarush.task.task35.task3513;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Stack;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class Model {
@@ -53,6 +51,28 @@ public class Model {
         rotate();
         move();
         rotate();
+    }
+
+    public void randomMove() {
+        int n = ((int) (Math.random() * 100)) % 4;
+        if (n == 0) {
+            left();
+        } else if (n == 1) {
+            up();
+        } else if (n == 2) {
+            right();
+        } else {
+            down();
+        }
+    }
+
+    public void autoMove() {
+        PriorityQueue<MoveEfficiency> queue = new PriorityQueue<>(4, Collections.reverseOrder());
+        queue.offer(getMoveEfficiency(this::left));
+        queue.offer(getMoveEfficiency(this::right));
+        queue.offer(getMoveEfficiency(this::up));
+        queue.offer(getMoveEfficiency(this::down));
+        queue.peek().getMove().move();
     }
 
     public boolean canMove() {
@@ -194,7 +214,25 @@ public class Model {
             gameTiles = previousStates.pop();
             score = previousScores.pop();
         }
+    }
 
+    public MoveEfficiency getMoveEfficiency(Move move) {
+        move.move();
+        boolean isChanged = hasBoardChanged();
+        MoveEfficiency result = new MoveEfficiency(
+                isChanged ? getEmptyTiles().size() : -1,
+                isChanged ? score : 0,
+                move
+        );
+        rollback();
+        return result;
+    }
 
+    public boolean hasBoardChanged() {
+        return getAllTilesWeight(previousStates.peek()) != getAllTilesWeight(gameTiles);
+    }
+
+    private int getAllTilesWeight(Tile[][] tiles) {
+        return Arrays.stream(tiles).flatMap(Arrays::stream).mapToInt(tile -> tile.value).sum();
     }
 }
