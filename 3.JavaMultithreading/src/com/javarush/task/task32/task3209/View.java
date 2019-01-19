@@ -2,8 +2,12 @@ package com.javarush.task.task32.task3209;
 
 import com.javarush.task.task32.task3209.listeners.FrameListener;
 import com.javarush.task.task32.task3209.listeners.TabbedPaneChangeListener;
+import com.javarush.task.task32.task3209.listeners.UndoListener;
 
 import javax.swing.*;
+import javax.swing.undo.CannotRedoException;
+import javax.swing.undo.CannotUndoException;
+import javax.swing.undo.UndoManager;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -13,6 +17,16 @@ public class View extends JFrame implements ActionListener {
     private JTabbedPane tabbedPane = new JTabbedPane();
     private JTextPane htmlTextPane = new JTextPane();
     private JEditorPane plainTextPane = new JEditorPane();
+    private UndoManager undoManager = new UndoManager();
+    private UndoListener undoListener = new UndoListener(undoManager);
+
+    public View() {
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception e) {
+            ExceptionHandler.log(e);
+        }
+    }
 
     @Override
     public void actionPerformed(ActionEvent e) {
@@ -24,6 +38,10 @@ public class View extends JFrame implements ActionListener {
 
     public void setController(Controller controller) {
         this.controller = controller;
+    }
+
+    public UndoListener getUndoListener() {
+        return undoListener;
     }
 
     public void init() {
@@ -38,7 +56,15 @@ public class View extends JFrame implements ActionListener {
     }
 
     public void initMenuBar() {
-
+        JMenuBar menuBar = new JMenuBar();
+        MenuHelper.initFileMenu(this, menuBar);
+        MenuHelper.initEditMenu(this, menuBar);
+        MenuHelper.initStyleMenu(this, menuBar);
+        MenuHelper.initAlignMenu(this, menuBar);
+        MenuHelper.initColorMenu(this, menuBar);
+        MenuHelper.initFontMenu(this, menuBar);
+        MenuHelper.initHelpMenu(this, menuBar);
+        getContentPane().add(menuBar, BorderLayout.NORTH);
     }
 
     public void initEditor() {
@@ -59,4 +85,34 @@ public class View extends JFrame implements ActionListener {
     public void selectedTabChanged() {
 
     }
+
+    public boolean canUndo() {
+        return undoManager.canUndo();
+    }
+
+    public boolean canRedo() {
+        return undoManager.canRedo();
+    }
+
+    public void undo() {
+        try {
+            undoManager.undo();
+        } catch (CannotUndoException cue) {
+            ExceptionHandler.log(cue);
+        }
+    }
+
+    public void redo() {
+        try {
+            undoManager.redo();
+        } catch (CannotRedoException cue) {
+            ExceptionHandler.log(cue);
+        }
+    }
+
+    public void resetUndo() {
+        undoManager.discardAllEdits();
+    }
+
+
 }

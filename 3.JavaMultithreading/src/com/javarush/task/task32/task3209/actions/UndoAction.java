@@ -1,11 +1,19 @@
 package com.javarush.task.task32.task3209.actions;
 
-/**
- * TODO: comment
- *
- * @author Alexander Savchenko
- * @version 1.0
- * @since 2019-01-19
- */
-public class UndoAction {
+import com.javarush.task.task32.task3209.View;
+
+import javax.swing.*;
+import java.awt.event.ActionEvent;
+
+public class UndoAction extends AbstractAction {
+    private View view;
+
+    public UndoAction(View view) {
+        this.view = view;
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent actionEvent) {
+        view.undo();
+    }
 }

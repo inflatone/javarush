@@ -1,11 +1,20 @@
 package com.javarush.task.task32.task3209.actions;
 
-/**
- * TODO: comment
- *
- * @author Alexander Savchenko
- * @version 1.0
- * @since 2019-01-19
- */
-public class RedoAction {
+import com.javarush.task.task32.task3209.View;
+
+import javax.swing.*;
+import java.awt.event.ActionEvent;
+
+public class RedoAction extends AbstractAction {
+    private View view;
+
+    public RedoAction(View view) {
+        this.view = view;
+    }
+
+
+    @Override
+    public void actionPerformed(ActionEvent actionEvent) {
+        view.redo();
+    }
 }
