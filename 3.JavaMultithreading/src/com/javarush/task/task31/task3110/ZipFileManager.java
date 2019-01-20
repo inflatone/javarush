@@ -96,6 +96,40 @@ public class ZipFileManager {
         Files.copy(temp, zipFile, StandardCopyOption.REPLACE_EXISTING);
     }
 
+    public void addFile(Path path) throws Exception {
+        addFiles(Collections.singletonList(path));
+    }
+
+    public void addFiles(List<Path> absolutePathList) throws Exception {
+        checkArchiveExistence();
+        Path temp = Files.createTempFile(null, null);
+        try (ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(temp))) {
+            List<Path> currentFiles = new ArrayList<>();
+            try (ZipInputStream zipIn = new ZipInputStream(Files.newInputStream(zipFile))) {
+                for (ZipEntry entry = zipIn.getNextEntry(); entry != null; entry = zipIn.getNextEntry()) {
+                    currentFiles.add(Paths.get(entry.getName()));
+                    zipOut.putNextEntry(new ZipEntry(entry.getName()));
+                    copyData(zipIn, zipOut);
+                    zipOut.closeEntry();
+                }
+            }
+            for (Path absoluteFilePath : absolutePathList) {
+                Path fileName = absoluteFilePath.getFileName();
+                if (Files.notExists(absoluteFilePath)) {
+                    throw new PathIsNotFoundException();
+                }
+                if (currentFiles.contains(fileName)) {
+                    ConsoleHelper.writeMessage(String.format("%s уже существует в архиве.", fileName.toString()));
+                } else {
+                    addNewZipEntry(zipOut, absoluteFilePath.getParent(), fileName);
+                    ConsoleHelper.writeMessage(String.format("%s добавлен в архив.", fileName.toString()));
+                }
+            }
+
+        }
+        Files.copy(temp, zipFile, StandardCopyOption.REPLACE_EXISTING);
+    }
+
     private void createDirectoriesIfNotExist(Path directoryPath) throws IOException {
         if (Files.notExists(directoryPath)) {
             Files.createDirectories(directoryPath);
