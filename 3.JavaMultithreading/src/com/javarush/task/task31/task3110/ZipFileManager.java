@@ -4,6 +4,7 @@ import com.javarush.task.task31.task3110.exception.PathIsNotFoundException;
 import com.javarush.task.task31.task3110.exception.WrongZipFileException;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
@@ -23,10 +24,7 @@ public class ZipFileManager {
     }
 
     public void createZip(Path source) throws Exception {
-        Path zipDirectory = zipFile.getParent();
-        if (Files.notExists(zipDirectory)) {
-            Files.createDirectories(zipDirectory);
-        }
+        createDirectoriesIfNotExist(zipFile.getParent());
         try (
                 ZipOutputStream zipOutputStream = new ZipOutputStream(Files.newOutputStream(zipFile))
         ) {
@@ -44,13 +42,11 @@ public class ZipFileManager {
     }
 
     public List<FileProperties> getFilesList() throws Exception {
-        if (!Files.isRegularFile(zipFile)) {
-            throw new WrongZipFileException();
-        }
+        checkArchiveExistence();
         List<FileProperties> properties = new ArrayList<>();
-        try (ZipInputStream zipInputStream = new ZipInputStream(Files.newInputStream(zipFile))) {
-            for (ZipEntry entry = zipInputStream.getNextEntry(); entry != null; entry = zipInputStream.getNextEntry()) {
-                copyData(zipInputStream, new ByteArrayOutputStream());
+        try (ZipInputStream zipIn = new ZipInputStream(Files.newInputStream(zipFile))) {
+            for (ZipEntry entry = zipIn.getNextEntry(); entry != null; entry = zipIn.getNextEntry()) {
+                copyData(zipIn, new ByteArrayOutputStream());
                 properties.add(
                         new FileProperties(
                                 entry.getName(),
@@ -62,6 +58,32 @@ public class ZipFileManager {
             }
         }
         return properties;
+    }
+
+    public void extractAll(Path outputFolder) throws Exception {
+        checkArchiveExistence();
+        createDirectoriesIfNotExist(outputFolder);
+        try (ZipInputStream zipIn = new ZipInputStream(Files.newInputStream(zipFile))) {
+            for (ZipEntry entry = zipIn.getNextEntry(); entry != null; entry = zipIn.getNextEntry()) {
+                Path fullFilePath = outputFolder.resolve(entry.getName());
+                createDirectoriesIfNotExist(fullFilePath.getParent());
+                try (OutputStream fos = Files.newOutputStream(fullFilePath)) {
+                    copyData(zipIn, fos);
+                }
+            }
+        }
+    }
+
+    private void createDirectoriesIfNotExist(Path directoryPath) throws IOException {
+        if (Files.notExists(directoryPath)) {
+            Files.createDirectories(directoryPath);
+        }
+    }
+
+    private void checkArchiveExistence() throws Exception {
+        if (!Files.isRegularFile(zipFile)) {
+            throw new WrongZipFileException();
+        }
     }
 
     private void addNewZipEntry(ZipOutputStream zipOutputStream, Path filePath, Path fileName) throws Exception {
