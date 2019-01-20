@@ -3,13 +3,10 @@ package com.javarush.task.task31.task3110;
 import com.javarush.task.task31.task3110.exception.PathIsNotFoundException;
 import com.javarush.task.task31.task3110.exception.WrongZipFileException;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.io.*;
+import java.nio.file.*;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -72,6 +69,31 @@ public class ZipFileManager {
                 }
             }
         }
+    }
+
+    public void removeFile(Path path) throws Exception {
+        removeFiles(Collections.singletonList(path));
+    }
+
+    public void removeFiles(List<Path> pathList) throws Exception {
+        checkArchiveExistence();
+        Path temp = Files.createTempFile(null, null);
+        try (
+                ZipInputStream zipIn = new ZipInputStream(Files.newInputStream(zipFile));
+                ZipOutputStream zipOut = new ZipOutputStream(Files.newOutputStream(temp))
+        ) {
+            for (ZipEntry entry = zipIn.getNextEntry(); entry != null; entry = zipIn.getNextEntry()) {
+                Path filePath = Paths.get(entry.getName());
+                if (pathList.contains(filePath)) {
+                    ConsoleHelper.writeMessage(String.format("%s удалён из архива.", entry.getName()));
+                } else {
+                    zipOut.putNextEntry(new ZipEntry(entry.getName()));
+                    copyData(zipIn, zipOut);
+                    zipOut.closeEntry();
+                }
+            }
+        }
+        Files.copy(temp, zipFile, StandardCopyOption.REPLACE_EXISTING);
     }
 
     private void createDirectoriesIfNotExist(Path directoryPath) throws IOException {
