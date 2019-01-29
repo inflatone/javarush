@@ -1,6 +1,7 @@
 package com.javarush.task.task39.task3913;
 
 import com.javarush.task.task39.task3913.query.IPQuery;
+import com.javarush.task.task39.task3913.query.UserQuery;
 
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -12,11 +13,12 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class LogParser implements IPQuery {
+public class LogParser implements IPQuery, UserQuery {
     private Path logDir;
     private List<LogEvent> logEvents = new ArrayList<>();
 
@@ -50,10 +52,88 @@ public class LogParser implements IPQuery {
         return getFilteredIPSet(after, before, log -> log.status == status);
     }
 
-    private Set<String> getFilteredIPSet(Date after, Date before, Predicate<LogEvent> predicate) {
+    @Override
+    public Set<String> getAllUsers() {
+        return getFilteredUserSet(null, null, log -> true);
+    }
+
+    @Override
+    public int getNumberOfUsers(Date after, Date before) {
+        return getFilteredUserSet(
+                after, before, log -> true
+        ).size();
+    }
+
+    @Override
+    public int getNumberOfUserEvents(String user, Date after, Date before) {
+        return getFilteredAndMappedLogEventSet(
+                after, before, log -> log.name.equals(user), log -> log.event
+        ).size();
+    }
+
+    @Override
+    public Set<String> getUsersForIP(String ip, Date after, Date before) {
+        return getFilteredUserSet(after, before, log -> log.ip.equals(ip));
+    }
+
+    @Override
+    public Set<String> getLoggedUsers(Date after, Date before) {
+        return getEventFilteredUserSet(after, before, Event.LOGIN);
+    }
+
+    @Override
+    public Set<String> getDownloadedPluginUsers(Date after, Date before) {
+        return getEventFilteredUserSet(after, before, Event.DOWNLOAD_PLUGIN);
+    }
+
+    @Override
+    public Set<String> getWroteMessageUsers(Date after, Date before) {
+        return getEventFilteredUserSet(after, before, Event.WRITE_MESSAGE);
+    }
+
+    @Override
+    public Set<String> getSolvedTaskUsers(Date after, Date before) {
+        return getEventFilteredUserSet(after, before, Event.SOLVE_TASK);
+    }
+
+    @Override
+    public Set<String> getSolvedTaskUsers(Date after, Date before, int task) {
+        return getEventFilteredUserSet(after, before, Event.SOLVE_TASK, task);
+    }
+
+    @Override
+    public Set<String> getDoneTaskUsers(Date after, Date before) {
+        return getEventFilteredUserSet(after, before, Event.DONE_TASK);
+    }
+
+    @Override
+    public Set<String> getDoneTaskUsers(Date after, Date before, int task) {
+        return getEventFilteredUserSet(after, before, Event.DONE_TASK, task);
+    }
+
+    private Set<String> getFilteredIPSet(Date after, Date before, Predicate<LogEvent> filter) {
+        return getFilteredAndMappedLogEventSet(after, before, filter, LogEvent::getIp);
+    }
+
+    private Set<String> getFilteredUserSet(Date after, Date before, Predicate<LogEvent> filter) {
+        return getFilteredAndMappedLogEventSet(after, before, filter, log -> log.name);
+    }
+
+    private Set<String> getEventFilteredUserSet(Date after, Date before, Event event) {
+        return getFilteredUserSet(after, before, log -> log.event == event);
+    }
+
+    private Set<String> getEventFilteredUserSet(Date after, Date before, Event event, int eventTask) {
+        return getFilteredUserSet(after, before, log -> log.event == event && log.eventTask == eventTask);
+    }
+
+    private <T> Set<T> getFilteredAndMappedLogEventSet(
+            Date after, Date before, Predicate<LogEvent> filter, Function<LogEvent, T> mapper
+    ) {
         return getFilteredLogEventStream(after, before)
-                .filter(predicate)
-                .map(LogEvent::getIp).collect(Collectors.toSet());
+                .filter(filter)
+                .map(mapper)
+                .collect(Collectors.toSet());
     }
 
     private Stream<LogEvent> getFilteredLogEventStream(Date after, Date before) {
@@ -85,22 +165,20 @@ public class LogParser implements IPQuery {
 
     private void addLogEvent(String line) {
         String[] parts = line.split("\t");
-        Event event = LogParserUtils.chooseEvent(parts[3]);
-        Status status = LogParserUtils.chooseStatus(parts[4]);
-        Date date = LogParserUtils.getDate(parts[2]);
-        int eventSuffix = LogParserUtils.getEventIndex(event, parts[3]);
+        Event event = LogParserHelper.chooseEvent(parts[3]);
+        Status status = LogParserHelper.chooseStatus(parts[4]);
+        Date date = LogParserHelper.getDate(parts[2]);
+        int eventTask = LogParserHelper.getEventIndex(event, parts[3]);
         if (event != null && status != null && date != null) {
-            logEvents.add(new LogEvent(parts[0],
-                    parts[1],
-                    date,
-                    event,
-                    status,
-                    eventSuffix)
+            logEvents.add(
+                    new LogEvent(parts[0], parts[1], date, event, status, eventTask)
             );
         }
     }
 
-    private static class LogParserUtils {
+    private static class LogParserHelper {
+        private final static SimpleDateFormat formatter = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+
         private static int getEventIndex(Event event, String eventString) {
             return event == Event.SOLVE_TASK || event == Event.DONE_TASK
                     ? Integer.parseInt(eventString.split(" ")[1])
@@ -109,7 +187,7 @@ public class LogParser implements IPQuery {
 
         private static Date getDate(String dateString) {
             Date result = null;
-            SimpleDateFormat formatter = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+
             try {
                 result = formatter.parse(dateString);
             } catch (ParseException e) {
@@ -135,7 +213,6 @@ public class LogParser implements IPQuery {
                 }
             }
             return result;
-
         }
     }
 
@@ -144,21 +221,20 @@ public class LogParser implements IPQuery {
         private String name;
         private Date date;
         private Event event;
-        private int eventIndex;
+        private int eventTask;
         private Status status;
 
-        public LogEvent(String ip, String name, Date date, Event event, Status status, int eventIndex) {
+        LogEvent(String ip, String name, Date date, Event event, Status status, int eventTask) {
             this.ip = ip;
             this.name = name;
             this.date = date;
             this.event = event;
             this.status = status;
-            this.eventIndex = eventIndex;
+            this.eventTask = eventTask;
         }
 
-        public String getIp() {
+        String getIp() {
             return ip;
         }
     }
-
 }
