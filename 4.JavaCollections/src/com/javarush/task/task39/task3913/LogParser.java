@@ -1,9 +1,6 @@
 package com.javarush.task.task39.task3913;
 
-import com.javarush.task.task39.task3913.query.DateQuery;
-import com.javarush.task.task39.task3913.query.EventQuery;
-import com.javarush.task.task39.task3913.query.IPQuery;
-import com.javarush.task.task39.task3913.query.UserQuery;
+import com.javarush.task.task39.task3913.query.*;
 
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -14,16 +11,36 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery {
-    private Path logDir;
-    private List<LogEvent> logEvents = new ArrayList<>();
+public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery, QLQuery{
+    private final Path logDir;
+    private final List<LogEvent> logEvents = new ArrayList<>();
+
+    private final Map<Query, Supplier<Set<Object>>> executors = new HashMap<>();
+    {
+        executors.put(Query.IP, () -> getStream(log -> log.ip));
+        executors.put(Query.USER, () -> getStream(log -> log.name));
+        executors.put(Query.DATE, () -> getStream(log -> log.date));
+        executors.put(Query.EVENT, () -> getStream(log -> log.event));
+        executors.put(Query.STATUS, () -> getStream(log -> log.status));
+    }
 
     public LogParser(Path logDir) {
         this.logDir = logDir;
         initLogs();
+    }
+
+    @Override
+    public Set<Object> execute(String query) {
+        Query command = LogParserHelper.chooseEnumValue(Query.values(), query);
+        return command != null ? executors.get(command).get() : null;
+    }
+
+    private <T> Set<T> getStream(Function<LogEvent, T> mapper) {
+        return logEvents.stream().map(mapper).collect(Collectors.toSet());
     }
 
     @Override
@@ -352,7 +369,7 @@ public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery {
         private static <T extends Enum> T chooseEnumValue(T[] values, String representation) {
             T result = null;
             for (T value : values) {
-                if (representation.startsWith(value.name())) {
+                if (representation.startsWith(value.toString())) {
                     result = value;
                     break;
                 }
@@ -376,6 +393,25 @@ public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery {
             this.event = event;
             this.status = status;
             this.eventTask = eventTask;
+        }
+    }
+
+    private enum Query {
+        IP("get ip"),
+        USER("get user"),
+        DATE("get date"),
+        EVENT("get event"),
+        STATUS("get status");
+
+        private final String name;
+
+        Query(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String toString() {
+            return name;
         }
     }
 }
