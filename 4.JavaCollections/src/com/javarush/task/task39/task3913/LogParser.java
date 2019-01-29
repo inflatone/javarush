@@ -1,6 +1,7 @@
 package com.javarush.task.task39.task3913;
 
 import com.javarush.task.task39.task3913.query.DateQuery;
+import com.javarush.task.task39.task3913.query.EventQuery;
 import com.javarush.task.task39.task3913.query.IPQuery;
 import com.javarush.task.task39.task3913.query.UserQuery;
 
@@ -10,16 +11,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class LogParser implements IPQuery, UserQuery, DateQuery {
+public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery {
     private Path logDir;
     private List<LogEvent> logEvents = new ArrayList<>();
 
@@ -35,7 +33,7 @@ public class LogParser implements IPQuery, UserQuery, DateQuery {
 
     @Override
     public Set<String> getUniqueIPs(Date after, Date before) {
-        return getFilteredIPSet(after, before, log -> true);
+        return getFilteredIPSet(after, before, null);
     }
 
     @Override
@@ -55,13 +53,13 @@ public class LogParser implements IPQuery, UserQuery, DateQuery {
 
     @Override
     public Set<String> getAllUsers() {
-        return getFilteredUserSet(null, null, log -> true);
+        return getFilteredUserSet(null, null, null);
     }
 
     @Override
     public int getNumberOfUsers(Date after, Date before) {
         return getFilteredUserSet(
-                after, before, log -> true
+                after, before, null
         ).size();
     }
 
@@ -150,6 +148,83 @@ public class LogParser implements IPQuery, UserQuery, DateQuery {
     @Override
     public Set<Date> getDatesWhenUserDownloadedPlugin(String user, Date after, Date before) {
         return getDatesForUserAndEvent(user, Event.DOWNLOAD_PLUGIN, after, before);
+    }
+
+    @Override
+    public int getNumberOfAllEvents(Date after, Date before) {
+        return getAllEvents(after, before).size();
+    }
+
+    @Override
+    public Set<Event> getAllEvents(Date after, Date before) {
+        return getFilteredAndMappedLogEventSet(
+                after, before, null, log -> log.event
+        );
+    }
+
+    @Override
+    public Set<Event> getEventsForIP(String ip, Date after, Date before) {
+        return getFilteredAndMappedLogEventSet(
+                after, before, log -> log.ip.equals(ip), log -> log.event
+        );
+    }
+
+    @Override
+    public Set<Event> getEventsForUser(String user, Date after, Date before) {
+        return getFilteredAndMappedLogEventSet(
+                after, before, log -> log.name.equals(user), log -> log.event
+        );
+    }
+
+    @Override
+    public Set<Event> getFailedEvents(Date after, Date before) {
+        return getFilteredAndMappedLogEventSet(
+                after, before, log -> log.status == Status.FAILED, log -> log.event
+        );
+    }
+
+    @Override
+    public Set<Event> getErrorEvents(Date after, Date before) {
+        return getFilteredAndMappedLogEventSet(
+                after, before, log -> log.status == Status.ERROR, log -> log.event
+        );
+    }
+
+    @Override
+    public int getNumberOfAttemptToSolveTask(int task, Date after, Date before) {
+        return getEventFilteredLogsCount(after, before, Event.SOLVE_TASK, task);
+    }
+
+    @Override
+    public int getNumberOfSuccessfulAttemptToSolveTask(int task, Date after, Date before) {
+        return getEventFilteredLogsCount(after, before, Event.DONE_TASK, task);
+    }
+
+    @Override
+    public Map<Integer, Integer> getAllSolvedTasksAndTheirNumber(Date after, Date before) {
+        return getTasksStatsByEvent(after, before, Event.SOLVE_TASK);
+    }
+
+    @Override
+    public Map<Integer, Integer> getAllDoneTasksAndTheirNumber(Date after, Date before) {
+        return getTasksStatsByEvent(after, before, Event.DONE_TASK);
+    }
+
+    private int getEventFilteredLogsCount(Date after, Date before, Event event, int eventTask) {
+        return (int) getFilteredLogEventStream(
+                after, before, log -> log.event == event && log.eventTask == eventTask
+        ).count();
+    }
+
+    private Map<Integer, Integer> getTasksStatsByEvent(Date after, Date before, Event event) {
+        return getFilteredLogEventStream(
+                after, before, log -> log.event == event
+        ).collect(
+                Collectors.groupingBy(
+                        log -> log.eventTask,
+                        Collectors.summingInt(log -> 1)
+                )
+        );
     }
 
     private Date getUserFirstTimeDate(Date after, Date before, String user, Event event, Integer eventTask) {
