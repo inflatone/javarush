@@ -9,24 +9,17 @@ import java.nio.file.Path;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery, QLQuery{
+public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery, QLQuery {
     private final Path logDir;
     private final List<LogEvent> logEvents = new ArrayList<>();
-
-    private final Map<Query, Supplier<Set<Object>>> executors = new HashMap<>();
-    {
-        executors.put(Query.IP, () -> getStream(log -> log.ip));
-        executors.put(Query.USER, () -> getStream(log -> log.name));
-        executors.put(Query.DATE, () -> getStream(log -> log.date));
-        executors.put(Query.EVENT, () -> getStream(log -> log.event));
-        executors.put(Query.STATUS, () -> getStream(log -> log.status));
-    }
 
     public LogParser(Path logDir) {
         this.logDir = logDir;
@@ -35,12 +28,7 @@ public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery, QLQ
 
     @Override
     public Set<Object> execute(String query) {
-        Query command = LogParserHelper.chooseEnumValue(Query.values(), query);
-        return command != null ? executors.get(command).get() : null;
-    }
-
-    private <T> Set<T> getStream(Function<LogEvent, T> mapper) {
-        return logEvents.stream().map(mapper).collect(Collectors.toSet());
+        return new Executor(query).executeQuery();
     }
 
     @Override
@@ -338,8 +326,67 @@ public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery, QLQ
         }
     }
 
+    private enum Query {
+        IP("ip", Function.identity(), log -> log.ip),
+        USER("user", Function.identity(), log -> log.name),
+        DATE("date", LogParserHelper::getDate, log -> log.date),
+        EVENT("event", LogParserHelper::chooseEvent, log -> log.event),
+        STATUS("status", LogParserHelper::chooseStatus, log -> log.status);
+
+        private static final String VALUES_REGEX_PART;
+
+        static {
+            VALUES_REGEX_PART = Arrays.stream(values())
+                    .map(v -> v.name)
+                    .collect(Collectors.joining("|"));
+        }
+
+        private final String name;
+        private final Function<String, ?> stringMapper;
+        private final Function<LogEvent, ?> fieldMapper;
+
+        Query(String name, Function<String, ?> stringMapper, Function<LogEvent, ?> fieldMapper) {
+            this.name = name;
+            this.stringMapper = stringMapper;
+            this.fieldMapper = fieldMapper;
+        }
+
+        private boolean validate(LogEvent log, String temp) {
+            return fieldMapper.apply(log).equals(
+                    stringMapper.apply(temp)
+            );
+        }
+
+        @SuppressWarnings("unchecked")
+        private <T> Function<LogEvent, T> fieldMapper() {
+            return (Function<LogEvent, T>) fieldMapper;
+        }
+
+        @Override
+        public String toString() {
+            return name;
+        }
+    }
+
+    private static class ParseHelper {
+        private final static Pattern GET_QUERY_PATTERN
+                = Pattern.compile(String.format("(?<=get )(?:%s)", Query.VALUES_REGEX_PART));
+        private final static Pattern FOR_QUERY_PATTERN
+                = Pattern.compile(String.format("(?<= for )(?:%s)", Query.VALUES_REGEX_PART));
+        private final static Pattern FOR_PARAM_QUERY_PATTERN
+                = Pattern.compile("(?<= = \")(.+)(?=\")");
+
+        static String getPart(int partNum, String line) {
+            Pattern pattern = partNum == 0
+                    ? GET_QUERY_PATTERN
+                    : partNum == 1 ? FOR_QUERY_PATTERN : FOR_PARAM_QUERY_PATTERN;
+            Matcher matcher = pattern.matcher(line);
+            return matcher.find() ? matcher.group() : "";
+        }
+    }
+
     private static class LogParserHelper {
-        private final static SimpleDateFormat formatter = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+        private final static SimpleDateFormat FORMATTER = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
 
         private static int getEventIndex(Event event, String eventString) {
             return event == Event.SOLVE_TASK || event == Event.DONE_TASK
@@ -351,7 +398,7 @@ public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery, QLQ
             Date result = null;
 
             try {
-                result = formatter.parse(dateString);
+                result = FORMATTER.parse(dateString);
             } catch (ParseException e) {
                 e.printStackTrace();
             }
@@ -396,22 +443,45 @@ public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery, QLQ
         }
     }
 
-    private enum Query {
-        IP("get ip"),
-        USER("get user"),
-        DATE("get date"),
-        EVENT("get event"),
-        STATUS("get status");
+    private class Executor {
+        private final Map<Query, BiFunction<Query, String, Set<Object>>> commands;
+        private String query;
 
-        private final String name;
-
-        Query(String name) {
-            this.name = name;
+        {
+            commands = Arrays.stream(Query.values())
+                    .collect(Collectors.toMap(
+                            Function.identity(),
+                            query ->
+                                    (q, s) -> getSet(query.fieldMapper(), q, s)
+                    ));
         }
 
-        @Override
-        public String toString() {
-            return name;
+        Executor(String query) {
+            this.query = query;
+        }
+
+        Set<Object> executeQuery() {
+            return commands.getOrDefault(
+                    LogParserHelper.chooseEnumValue(Query.values(), ParseHelper.getPart(0, query)),
+                    (q, s) -> Collections.emptySet()
+            ).apply(
+                    LogParserHelper.chooseEnumValue(Query.values(), ParseHelper.getPart(1, query)),
+                    ParseHelper.getPart(2, query)
+            );
+        }
+
+        private <T> Set<T> getSet(Function<LogEvent, T> mapper, Query forPart, String forPartParam) {
+            return getFilteredStream(forPart, forPartParam)
+                    .map(mapper)
+                    .collect(Collectors.toSet());
+        }
+
+        private Stream<LogEvent> getFilteredStream(Query forPart, String forPartParam) {
+            Stream<LogEvent> result = logEvents.stream();
+            if (forPart != null && forPartParam != null) {
+                result = result.filter(log -> forPart.validate(log, forPartParam));
+            }
+            return result;
         }
     }
 }
