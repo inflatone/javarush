@@ -9,7 +9,6 @@ import java.nio.file.Path;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
@@ -286,10 +285,10 @@ public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery, QLQ
     private Stream<LogEvent> getFilteredLogEventStream(Date after, Date before, Predicate<LogEvent> additionalFilter) {
         Stream<LogEvent> result = logEvents.stream();
         if (before != null) {
-            result = result.filter(event -> event.date.getTime() <= before.getTime());
+            result = result.filter(event -> event.date.before(before));
         }
         if (after != null) {
-            result = result.filter(event -> event.date.getTime() >= after.getTime());
+            result = result.filter(event -> event.date.after(after));
         }
         if (additionalFilter != null) {
             result = result.filter(additionalFilter);
@@ -314,6 +313,9 @@ public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery, QLQ
     }
 
     private void addLogEvent(String line) {
+
+
+
         String[] parts = line.split("\t");
         Event event = LogParserHelper.chooseEvent(parts[3]);
         Status status = LogParserHelper.chooseStatus(parts[4]);
@@ -368,25 +370,85 @@ public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery, QLQ
         }
     }
 
-    private static class ParseHelper {
-        private final static Pattern GET_QUERY_PATTERN
-                = Pattern.compile(String.format("(?<=get )(?:%s)", Query.VALUES_REGEX_PART));
-        private final static Pattern FOR_QUERY_PATTERN
-                = Pattern.compile(String.format("(?<= for )(?:%s)", Query.VALUES_REGEX_PART));
-        private final static Pattern FOR_PARAM_QUERY_PATTERN
-                = Pattern.compile("(?<= = \")(.+)(?=\")");
+    private static class QueryParser {
+        private final static Pattern PATTERN = Pattern.compile(
+                String.format(
+                        "get " + "(?<get>%s)"
+                                + "( for " + "(?<for>%<s)"
+                                + " = \"" + "(?<value>.*?)" + "\""
+                                + "( and date between \""
+                                + "(?<after>.*?)"
+                                + "\" and \""
+                                + "(?<before>.*?)"
+                                + "\")?)?",
+                        Query.VALUES_REGEX_PART
+                )
+        );
+        private final Matcher matcher;
 
-        static String getPart(int partNum, String line) {
-            Pattern pattern = partNum == 0
-                    ? GET_QUERY_PATTERN
-                    : partNum == 1 ? FOR_QUERY_PATTERN : FOR_PARAM_QUERY_PATTERN;
-            Matcher matcher = pattern.matcher(line);
-            return matcher.find() ? matcher.group() : "";
+        private Query getPart;
+        private Predicate<LogEvent> filter;
+        private Date after;
+        private Date before;
+
+        QueryParser(String line) {
+            matcher = PATTERN.matcher(line);
+            initCheck();
         }
+
+        private void initCheck() {
+            if (matcher.find()) {
+                getPart = parseGetPart();
+                filter = composeFilter();
+                after = parseAfterPart();
+                before = parseBeforePart();
+            }
+        }
+
+        private Query parseGetPart() {
+            return LogParserHelper.chooseEnumValue(
+                    Query.values(),
+                    matcher.group("get")
+            );
+        }
+
+        private Query parseForPart() {
+            return LogParserHelper.chooseEnumValue(
+                    Query.values(),
+                    matcher.group("for")
+            );
+        }
+
+        private Predicate<LogEvent> composeFilter() {
+            Query query = parseForPart();
+            String value = parseValuePart();
+            return query != null && value != null
+                    ? log -> query.validate(log, value)
+                    : null;
+        }
+
+        private String parseValuePart() {
+            return matcher.group("value");
+        }
+
+        private Date parseBeforePart() {
+            return getDate("before");
+        }
+
+        private Date parseAfterPart() {
+            return getDate("after");
+        }
+
+        private Date getDate(String groupName) {
+            String date = matcher.group(groupName);
+            return date != null ? LogParserHelper.getDate(date) : null;
+        }
+
     }
 
     private static class LogParserHelper {
         private final static SimpleDateFormat FORMATTER = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+
 
         private static int getEventIndex(Event event, String eventString) {
             return event == Event.SOLVE_TASK || event == Event.DONE_TASK
@@ -396,7 +458,6 @@ public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery, QLQ
 
         private static Date getDate(String dateString) {
             Date result = null;
-
             try {
                 result = FORMATTER.parse(dateString);
             } catch (ParseException e) {
@@ -414,14 +475,10 @@ public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery, QLQ
         }
 
         private static <T extends Enum> T chooseEnumValue(T[] values, String representation) {
-            T result = null;
-            for (T value : values) {
-                if (representation.startsWith(value.toString())) {
-                    result = value;
-                    break;
-                }
-            }
-            return result;
+            return representation == null ? null : Arrays.stream(values)
+                    .filter(name -> representation.startsWith(name.toString()))
+                    .findAny()
+                    .orElse(null);
         }
     }
 
@@ -444,7 +501,7 @@ public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery, QLQ
     }
 
     private class Executor {
-        private final Map<Query, BiFunction<Query, String, Set<Object>>> commands;
+        private final Map<Query, Function<QueryParser, Set<Object>>> commands;
         private String query;
 
         {
@@ -452,7 +509,7 @@ public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery, QLQ
                     .collect(Collectors.toMap(
                             Function.identity(),
                             query ->
-                                    (q, s) -> getSet(query.fieldMapper(), q, s)
+                                    (p) -> getSet(query.fieldMapper(), p)
                     ));
         }
 
@@ -461,27 +518,22 @@ public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery, QLQ
         }
 
         Set<Object> executeQuery() {
+            QueryParser parser = new QueryParser(query);
             return commands.getOrDefault(
-                    LogParserHelper.chooseEnumValue(Query.values(), ParseHelper.getPart(0, query)),
-                    (q, s) -> Collections.emptySet()
-            ).apply(
-                    LogParserHelper.chooseEnumValue(Query.values(), ParseHelper.getPart(1, query)),
-                    ParseHelper.getPart(2, query)
-            );
+                    parser.getPart,
+                    p -> Collections.emptySet()
+            ).apply(parser);
         }
 
-        private <T> Set<T> getSet(Function<LogEvent, T> mapper, Query forPart, String forPartParam) {
-            return getFilteredStream(forPart, forPartParam)
+        private <T> Set<T> getSet(Function<LogEvent, T> mapper, QueryParser queryParser) {
+            return getFilteredStream(queryParser)
                     .map(mapper)
                     .collect(Collectors.toSet());
         }
 
-        private Stream<LogEvent> getFilteredStream(Query forPart, String forPartParam) {
-            Stream<LogEvent> result = logEvents.stream();
-            if (forPart != null && forPartParam != null) {
-                result = result.filter(log -> forPart.validate(log, forPartParam));
-            }
-            return result;
+        private Stream<LogEvent> getFilteredStream(QueryParser parser) {
+            System.out.println(parser.before);
+            return getFilteredLogEventStream(parser.after, parser.before, parser.filter);
         }
     }
 }
