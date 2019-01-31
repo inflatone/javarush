@@ -315,7 +315,6 @@ public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery, QLQ
     private void addLogEvent(String line) {
 
 
-
         String[] parts = line.split("\t");
         Event event = LogParserHelper.chooseEvent(parts[3]);
         Status status = LogParserHelper.chooseStatus(parts[4]);
@@ -370,20 +369,27 @@ public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery, QLQ
         }
     }
 
+    //get field
+    //get field1 for field2 = "value1"
+    //get field1 for field2 = "value1" and field3 = "value2"
+    //get field for date between = "after" and "before"
+    //get field1 for field2 = "value1" and date between = "after" and "before"
+    //get field1 for field2 = "value1" and field3 = "value2" and date between = "after" and "before"
     private static class QueryParser {
+        private final static String GET_QUERY = String.format("(?<get>%s)", Query.VALUES_REGEX_PART);
+        private final static String DATE_BETWEEN_QUERY = "date between \"(?<after>.*?)\" and \"(?<before>.*?)\"";
+
         private final static Pattern PATTERN = Pattern.compile(
                 String.format(
-                        "get " + "(?<get>%s)"
-                                + "( for " + "(?<for>%<s)"
-                                + " = \"" + "(?<value>.*?)" + "\""
-                                + "( and date between \""
-                                + "(?<after>.*?)"
-                                + "\" and \""
-                                + "(?<before>.*?)"
-                                + "\")?)?",
-                        Query.VALUES_REGEX_PART
+                        "get %s( for %s( and %s)?)?( (?:and|for) %s)?",
+                        GET_QUERY, getForQuery(1), getForQuery(2), DATE_BETWEEN_QUERY
                 )
         );
+
+        private static String getForQuery(int num) {
+            return String.format("(?<for%s>%s) = \"(?<value%1$s>.*?)\"", num, Query.VALUES_REGEX_PART);
+        }
+
         private final Matcher matcher;
 
         private Query getPart;
@@ -399,7 +405,7 @@ public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery, QLQ
         private void initCheck() {
             if (matcher.find()) {
                 getPart = parseGetPart();
-                filter = composeFilter();
+                filter = composeFilter(null, 1, 2);
                 after = parseAfterPart();
                 before = parseBeforePart();
             }
@@ -412,23 +418,33 @@ public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery, QLQ
             );
         }
 
-        private Query parseForPart() {
+        private Query parseForPart(int num) {
             return LogParserHelper.chooseEnumValue(
                     Query.values(),
-                    matcher.group("for")
+                    matcher.group("for" + num)
             );
         }
 
-        private Predicate<LogEvent> composeFilter() {
-            Query query = parseForPart();
-            String value = parseValuePart();
+        private Predicate<LogEvent> composeFilter(Predicate<LogEvent> currentFilter , int num, int amount) {
+            Predicate<LogEvent> newPart = getNextPartFilter(num);
+            currentFilter = currentFilter == null
+                    ? newPart
+                    : newPart == null ? currentFilter : currentFilter.and(newPart);
+           return currentFilter == null || num == amount
+                   ? currentFilter
+                   : composeFilter(currentFilter, num + 1, amount);
+        }
+
+        private Predicate<LogEvent> getNextPartFilter(int num) {
+            Query query = parseForPart(num);
+            String value = parseValuePart(num);
             return query != null && value != null
                     ? log -> query.validate(log, value)
                     : null;
         }
 
-        private String parseValuePart() {
-            return matcher.group("value");
+        private String parseValuePart(int num) {
+            return matcher.group("value" + num);
         }
 
         private Date parseBeforePart() {
@@ -509,7 +525,7 @@ public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery, QLQ
                     .collect(Collectors.toMap(
                             Function.identity(),
                             query ->
-                                    (p) -> getSet(query.fieldMapper(), p)
+                                    p -> getSet(query.fieldMapper(), p)
                     ));
         }
 
@@ -532,7 +548,6 @@ public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery, QLQ
         }
 
         private Stream<LogEvent> getFilteredStream(QueryParser parser) {
-            System.out.println(parser.before);
             return getFilteredLogEventStream(parser.after, parser.before, parser.filter);
         }
     }
