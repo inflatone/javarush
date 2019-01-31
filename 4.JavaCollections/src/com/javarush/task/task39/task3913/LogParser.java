@@ -11,9 +11,11 @@ import java.util.stream.Stream;
 
 public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery, QLQuery {
     private final LogStorage storage;
+    private final QueryExecutor executor;
 
     public LogParser(Path logDir) {
         storage = new LogStorage(logDir);
+        executor = new QueryExecutor(this);
     }
 
     Stream<LogStorage.LogEvent> getFilteredLogStream(
@@ -24,7 +26,7 @@ public class LogParser implements IPQuery, UserQuery, DateQuery, EventQuery, QLQ
 
     @Override
     public Set<Object> execute(String query) {
-        return new QueryExecutor(this, query).executeQuery();
+        return executor.executeQuery(query);
     }
 
     @Override

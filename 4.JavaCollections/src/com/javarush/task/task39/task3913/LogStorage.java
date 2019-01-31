@@ -12,7 +12,7 @@ import java.util.stream.Stream;
 
 class LogStorage {
     private final List<LogEvent> logEvents = new ArrayList<>();
-    private Path logDir;
+    private final Path logDir;
 
     LogStorage(Path logDir) {
         this.logDir = logDir;

@@ -10,8 +10,7 @@ import java.util.stream.Stream;
 
 class QueryExecutor {
     private final Map<Query, Function<QueryParser, Set<Object>>> commands;
-    private LogParser logParser;
-    private String query;
+    private final LogParser logParser;
 
     {
         commands = Arrays.stream(Query.values())
@@ -22,12 +21,11 @@ class QueryExecutor {
                 ));
     }
 
-    QueryExecutor(LogParser logParser, String query) {
+    QueryExecutor(LogParser logParser) {
         this.logParser = logParser;
-        this.query = query;
     }
 
-    Set<Object> executeQuery() {
+    Set<Object> executeQuery(String query) {
         QueryParser parser = new QueryParser(query);
         return commands.getOrDefault(
                 parser.getGetPart(),
