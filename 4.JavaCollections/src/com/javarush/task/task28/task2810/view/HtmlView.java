@@ -15,11 +15,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 public class HtmlView implements View {
+    private Controller controller;
+
     private final String filePath =
             "./4.JavaCollections/src/"
                     + getClass().getPackage().getName().replace('.', '/')
-                    + "/vacancies.html";
-    private Controller controller;
+                    + "/vacancies.html"
+    ;
 
     @Override
     public void update(List<Vacancy> vacancies) {
@@ -72,6 +74,7 @@ public class HtmlView implements View {
                 current.select("a").first()
                         .text(v.getTitle())
                         .attr("href", v.getUrl());
+                //current.wrap("<tr class=\"vacancy\"></tr>");
                 originalTemplateRef.before(current);
             }
             result = original.outerHtml();
