@@ -1,18 +1,18 @@
 package com.javarush.task.task28.task2810.model;
 
-import com.javarush.task.task28.task2810.vo.Vacancy;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
+        import com.javarush.task.task28.task2810.vo.Vacancy;
+        import org.jsoup.Jsoup;
+        import org.jsoup.nodes.Document;
+        import org.jsoup.nodes.Element;
+        import org.jsoup.select.Elements;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+        import java.io.IOException;
+        import java.util.ArrayList;
+        import java.util.List;
 
 public class HHStrategy implements Strategy {
     private static final String SITE_NAME = "\"http://hh.ua\"";
-    private static final String URL_FORMAT = "http://hh.ua/search/vacancy?text=java+%s&page=%d";
+    private static final String URL_FORMAT = "http://hh.ua/search/vacancy?text=java+%s&page=%s";
     private static final String USER_AGENT = "Mozilla/5.0 (jsoup)";
 
     @Override
