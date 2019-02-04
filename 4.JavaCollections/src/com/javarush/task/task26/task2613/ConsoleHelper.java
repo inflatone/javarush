@@ -12,8 +12,9 @@ import java.util.function.Predicate;
 public class ConsoleHelper {
     private final static BufferedReader bis = new BufferedReader(new InputStreamReader(System.in));
     public final static String POSITIVE_NUMBER_REGEX = "^[1-9]\\d*" + "\\s*$";
+    public final static String CARD_NUMBER_REGEX = "^\\d{12}$";
+    public final static String PIN_REGEX = "^\\d{4}$";
     private final static String TWO_POSITIVE_NUMBERS_REGEX = "^[1-9]\\d*" + "\\s+" + "[1-9]\\d*" + "\\s*$";
-
 
     public static void writeMessage(String message) {
         if (message != null) {

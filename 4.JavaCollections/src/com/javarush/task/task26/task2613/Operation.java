@@ -1,6 +1,7 @@
 package com.javarush.task.task26.task2613;
 
 public enum Operation {
+    LOGIN,
     INFO,
     DEPOSIT,
     WITHDRAW,
@@ -11,6 +12,6 @@ public enum Operation {
         if (i < 1 || i > all.length) {
             throw new IllegalArgumentException();
         }
-        return all[i - 1];
+        return all[i];
     }
 }
