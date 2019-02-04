@@ -63,6 +63,10 @@ public class ConsoleHelper {
         );
     }
 
+    public static void printExitMessage() {
+        ConsoleHelper.writeMessage(res.getString("the.end"));
+    }
+
     private static <I, T> T getCorrectInput(
             String message, Function<String, I> preValidateMapper,
             Predicate<I> incorrectCondition, Function<I, T> returnMapper) throws InterruptOperationException {
@@ -94,7 +98,7 @@ public class ConsoleHelper {
 
     private static void checkExit(String line) throws InterruptOperationException {
         if ("EXIT".equalsIgnoreCase(line)) {
-            ConsoleHelper.writeMessage(res.getString("the.end"));
+            printExitMessage();
             throw new InterruptOperationException();
         }
     }
