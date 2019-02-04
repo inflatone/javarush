@@ -11,8 +11,7 @@ import java.util.function.Predicate;
 
 public class ConsoleHelper {
     private final static BufferedReader bis = new BufferedReader(new InputStreamReader(System.in));
-    private final static String POSITIVE_NUMBER_REGEX = "^[1-9]\\d*" + "\\s*$";
-
+    public final static String POSITIVE_NUMBER_REGEX = "^[1-9]\\d*" + "\\s*$";
     private final static String TWO_POSITIVE_NUMBERS_REGEX = "^[1-9]\\d*" + "\\s+" + "[1-9]\\d*" + "\\s*$";
 
 
@@ -50,15 +49,6 @@ public class ConsoleHelper {
         );
     }
 
-    public static int getValidAmount(Predicate<Integer> availabilityCondition) throws InterruptOperationException {
-        return getCorrectInput(
-                "Withdraw amount?",
-                ConsoleHelper::getInt,
-                i -> i == null || !availabilityCondition.test(i),
-                Function.identity()
-        );
-    }
-
     public static Operation askOperation() throws InterruptOperationException {
         return getCorrectInput(
                 "Operation?",
@@ -68,7 +58,7 @@ public class ConsoleHelper {
         );
     }
 
-    public static <I, T> T getCorrectInput(
+    private static <I, T> T getCorrectInput(
             String message, Function<String, I> preValidateMapper,
             Predicate<I> incorrectCondition, Function<I, T> returnMapper) throws InterruptOperationException {
         writeMessage(message);
@@ -95,10 +85,6 @@ public class ConsoleHelper {
             writeMessage("invalid, try again");
         }
         return result;
-    }
-
-    private static Integer getInt(String num) {
-        return num.matches(POSITIVE_NUMBER_REGEX) ? Integer.parseInt(num) : null;
     }
 
     private static void checkExit(String line) throws InterruptOperationException {
