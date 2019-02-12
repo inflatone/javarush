@@ -92,9 +92,9 @@ public class OurHashMapStorageStrategy implements StorageStrategy {
 
     private void transfer(Entry[] newTable) {
         int len = newTable.length;
-        for (int i = 0; i < table.length; i++) {
+        for (Entry entry : table) {
             for (
-                    Entry current = table[i];
+                    Entry current = entry;
                     current != null;
                     current = current.next
             ) {
