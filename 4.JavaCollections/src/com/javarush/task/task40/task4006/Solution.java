@@ -29,7 +29,6 @@ public class Solution {
             String responseLine;
 
             while ((responseLine = bufferedReader.readLine()) != null) {
-                System.out.println("!!");
                 System.out.println(responseLine);
             }
             out.close();
