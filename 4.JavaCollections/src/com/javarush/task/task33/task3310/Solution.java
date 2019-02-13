@@ -16,6 +16,8 @@ public class Solution {
         testStrategy(new FileStorageStrategy(), 100);
         Helper.printMessage("==========================================");
         testStrategy(new OurHashBiMapStorageStrategy(), 10000);
+        Helper.printMessage("==========================================");
+        testStrategy(new HashBiMapStorageStrategy(), 10000);
     }
 
     public static Set<Long> getIds(Shortener shortener, Set<String> strings) {
