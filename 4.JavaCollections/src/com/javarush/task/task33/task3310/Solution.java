@@ -18,6 +18,8 @@ public class Solution {
         testStrategy(new OurHashBiMapStorageStrategy(), 10000);
         Helper.printMessage("==========================================");
         testStrategy(new HashBiMapStorageStrategy(), 10000);
+        Helper.printMessage("==========================================");
+        testStrategy(new DualHashBidiMapStorageStrategy(), 10000);
     }
 
     public static Set<Long> getIds(Shortener shortener, Set<String> strings) {
