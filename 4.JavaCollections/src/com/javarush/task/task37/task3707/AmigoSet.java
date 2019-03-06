@@ -56,6 +56,18 @@ public class AmigoSet<E> extends AbstractSet<E> implements Serializable, Cloneab
     }
 
     @Override
+    @SuppressWarnings("unchecked")
+    public Object clone() {
+        try {
+            AmigoSet<E> copy = (AmigoSet<E>) super.clone();
+            copy.map = (HashMap<E, Object>) map.clone();
+            return copy;
+        } catch (Exception e) {
+            throw new InternalError(e);
+        }
+    }
+
+    @Override
     public Spliterator<E> spliterator() {
         return null;
     }
