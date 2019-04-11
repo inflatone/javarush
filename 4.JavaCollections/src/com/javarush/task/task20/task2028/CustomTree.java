@@ -32,13 +32,17 @@ public class CustomTree extends AbstractList<String> implements Cloneable, Seria
     }
 
     public String getParent(String s) {
+        Entry<String> result = getEntry(s);
+        return result == null ? null : result.parent.elementName;
+    }
+
+    private Entry<String> getEntry(String s) {
         Queue<Entry<String>> queue = new LinkedList<>();
         queue.offer(root);
         while (!queue.isEmpty()) {
             Entry<String> current = queue.poll();
-            if (!current.availableToAddLeftChildren && current.leftChild.elementName.equals(s)
-                    || !current.availableToAddRightChildren && current.rightChild.elementName.equals(s)) {
-                return current.elementName;
+            if (current.elementName.equals(s)) {
+                return current;
             }
             addChildren(queue, current);
         }
@@ -51,6 +55,67 @@ public class CustomTree extends AbstractList<String> implements Cloneable, Seria
         }
         if (entry.rightChild != null) {
             queue.offer(entry.rightChild);
+        }
+    }
+
+    @Override
+    public boolean remove(Object o) {
+        if (o.getClass() != String.class) {
+            throw new UnsupportedOperationException();
+        }
+        String name = (String) o;
+        Entry<String> result = getEntry(name);
+        if (result == null) {
+            return false;
+        }
+        Entry<String> parent = result.parent;
+        if (parent.leftChild.elementName.equals(name)) {
+            parent.leftChild = null;
+        } else {
+            parent.rightChild = null;
+        }
+        recount();
+        clearFlags();
+        return true;
+    }
+
+    private boolean isAllBlocked() {
+        Queue<Entry<String>> queue = new LinkedList<>();
+        queue.offer(root);
+        while (!queue.isEmpty()) {
+            Entry<String> current = queue.poll();
+            if (current.isAvailableToAddChildren()) {
+                return false;
+            }
+            addChildren(queue, current);
+        }
+        return true;
+    }
+
+    private void clearFlags() {
+        if (isAllBlocked()) {
+            Queue<Entry<String>> queue = new LinkedList<>();
+            queue.offer(root);
+            while (!queue.isEmpty()) {
+                Entry<String> current = queue.poll();
+                if (current.leftChild == null) {
+                    current.availableToAddLeftChildren = true;
+                }
+                if (current.rightChild == null) {
+                    current.availableToAddRightChildren = true;
+                }
+                addChildren(queue, current);
+            }
+        }
+    }
+
+    private void recount() {
+        size = -1;
+        Queue<Entry<String>> queue = new LinkedList<>();
+        queue.offer(root);
+        while (!queue.isEmpty()) {
+            addChildren(queue, queue.poll());
+            size++;
         }
     }
 
