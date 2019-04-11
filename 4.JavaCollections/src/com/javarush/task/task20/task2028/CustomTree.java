@@ -1,24 +1,63 @@
 package com.javarush.task.task20.task2028;
 
 import java.io.Serializable;
-import java.util.AbstractList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 /* 
 Построй дерево(1)
 */
 public class CustomTree extends AbstractList<String> implements Cloneable, Serializable {
+    Entry<String> root;
+    private int size;
+
+    public CustomTree() {
+        this.root = new Entry<>("root");
+    }
+
+    @Override
+    public boolean add(String s) {
+        Queue<Entry<String>> queue = new LinkedList<>();
+        Entry<String> parent = root;
+        while (parent != null && !parent.addChild(s)) {
+            addChildren(queue, parent);
+            parent = queue.poll();
+        }
+        size++;
+        return true;
+    }
+
     @Override
     public int size() {
-        return 0;
+        return size;
+    }
+
+    public String getParent(String s) {
+        Queue<Entry<String>> queue = new LinkedList<>();
+        queue.offer(root);
+        while (!queue.isEmpty()) {
+            Entry<String> current = queue.poll();
+            if (!current.availableToAddLeftChildren && current.leftChild.elementName.equals(s)
+                    || !current.availableToAddRightChildren && current.rightChild.elementName.equals(s)) {
+                return current.elementName;
+            }
+            addChildren(queue, current);
+        }
+        return null;
+    }
+
+    private void addChildren(Queue<Entry<String>> queue, Entry<String> entry) {
+        if (entry.leftChild != null) {
+            queue.offer(entry.leftChild);
+        }
+        if (entry.rightChild != null) {
+            queue.offer(entry.rightChild);
+        }
     }
 
     @Override
     public String get(int index) {
         throw new UnsupportedOperationException();
     }
-
 
     @Override
     public String set(int index, String element) {
@@ -64,6 +103,22 @@ public class CustomTree extends AbstractList<String> implements Cloneable, Seria
 
         public boolean isAvailableToAddChildren() {
             return availableToAddLeftChildren || availableToAddRightChildren;
+        }
+
+        boolean addChild(String name) {
+            if (!isAvailableToAddChildren()) {
+                return false;
+            }
+            Entry<T> child = new Entry<>(name);
+            child.parent = this;
+            if (availableToAddLeftChildren) {
+                leftChild = child;
+                availableToAddLeftChildren = false;
+            } else {
+                rightChild = child;
+                availableToAddRightChildren = false;
+            }
+            return true;
         }
     }
 }
