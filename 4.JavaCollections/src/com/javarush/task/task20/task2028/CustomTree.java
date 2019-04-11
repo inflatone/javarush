@@ -49,4 +49,21 @@ public class CustomTree extends AbstractList<String> implements Cloneable, Seria
     protected void removeRange(int fromIndex, int toIndex) {
         throw new UnsupportedOperationException();
     }
+
+    static class Entry<T> implements Serializable {
+        String elementName;
+        boolean availableToAddLeftChildren;
+        boolean availableToAddRightChildren;
+        Entry<T> parent, leftChild, rightChild;
+
+        public Entry(String elementName) {
+            this.elementName = elementName;
+            this.availableToAddLeftChildren = true;
+            this.availableToAddRightChildren = true;
+        }
+
+        public boolean isAvailableToAddChildren() {
+            return availableToAddLeftChildren || availableToAddRightChildren;
+        }
+    }
 }
